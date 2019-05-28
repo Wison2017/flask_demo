@@ -1,4 +1,4 @@
-#!/Users/Mac-78/.virtualenvs/flask_demo/bin/python
+#!/Users/wison/.virtualenvs/flask_demo/bin/python3
 import imp
 from migrate.versioning import api
 from app import db

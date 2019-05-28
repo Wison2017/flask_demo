@@ -1,4 +1,4 @@
-#!/Users/Mac-78/.virtualenvs/flask_demo/bin/python
+#!/Users/Wison/.virtualenvs/flask_demo/bin/python
 from migrate.versioning import api
 from config import SQLALCHEMY_DATABASE_URI
 from config import SQLALCHEMY_MIGRATE_REPO

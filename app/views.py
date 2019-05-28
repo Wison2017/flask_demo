@@ -1,10 +1,20 @@
 from app import app
 from app import oid, db
 from flask import render_template, flash, redirect, g, url_for, session, request
-from .forms import LoginForm, RegistrationForm
+from .forms import LoginForm, RegistrationForm, EditForm
 from app.models import User
 from flask_login import login_user, current_user, login_required, logout_user
 from werkzeug.urls import url_parse
+from datetime import datetime
+
+
+@app.before_request
+def before_request():
+    g.user = current_user
+    if g.user.is_authenticated():
+        g.user.last_seen = datetime.utcnow()
+        db.session.add(g.user)
+        db.session.commit()
 
 
 @app.route('/')
@@ -14,11 +24,11 @@ def index():
     user = g.user
     posts = [
         {
-            'author': {'nickname': 'John'},
+            'author': {'username': 'John'},
             'body': 'Beautiful day in Portland!'
         },
         {
-            'author': {'nickname': 'Susan'},
+            'author': {'username': 'Susan'},
             'body': 'The Avengers movie was so cool!'
         }
     ]
@@ -51,8 +61,6 @@ def logout():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
     form = RegistrationForm()
     if form.validate_on_submit():
         user = User(username=form.username.data, email=form.email.data)
@@ -64,6 +72,43 @@ def register():
     return render_template('register.html', title='Register', form=form)
 
 
+@app.route('/user/<username>', methods=['GET', 'POST'])
+def user(username):
+    user = User.query.filter_by(username=username).first()
+    if user is None:
+        flash('User ' + username + ' not Found!')
+        return redirect(url_for('index'))
+    posts = [
+        {'author': user, 'body': 'Test post #1'},
+        {'author': user, 'body': 'Test post #2'}
+    ]
+    return render_template('user.html', user=user, posts=posts)
 
 
+@app.route('/edit', methods=['GET', 'POST'])
+@login_required
+def edit():
+    form = EditForm()
+    if form.validate_on_submit():
+        g.user.username = form.username.data
+        g.user.about_me = form.about_me.data
+        db.session.add(g.user)
+        db.session.commit()
+        flash('Your changes have been saved.')
+        return redirect(url_for('edit'))
+    else:
+        form.username.data = g.user.username
+        form.about_me.data = g.user.about_me
+    return render_template('edit.html', form=form)
+
+
+@app.errorhandler(404)
+def internal_error(error):
+    return render_template('404.html'), 404
+
+
+@app.errorhandler(500)
+def internal_error(error):
+    db.session.rollback()
+    return render_template('500.html'), 500
 
